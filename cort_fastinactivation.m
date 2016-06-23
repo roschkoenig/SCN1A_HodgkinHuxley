@@ -1,25 +1,28 @@
-%% Calculate and Plot Bifurcations for cortical HH model
+%% Conducting a virtua experiment estimating fast inactivation
 %==========================================================================
-% This routine will simulate a Hodgkin-Huxley model adapted to capture
-% dynamics of cortical neurons for different parameterisations: the
-% wildtype sodium channels at 37, and 40 degrees; an SCN1A mutation causing
-% epilepsy at 37, and 40 degrees; and all of these at two different input
-% current strengths. 
+% The appropriateness of the model is evaluated by conducting virtual
+% voltage clamp experiments in order to evaluate whether the model predicts
+% real empirical measures. 
+% The routine below performs an two-pulse voltage clamp experiment aimed to
+% evaluate the dynamics of fast inactivation. A reduced set of HH equations
+% only including sodium channel function is probed with a specific set of
+% paired input pulses with increasing inter-pulse intervals. Short
+% intervals leave little time for inactivation to recover, and therefore
+% diminish model output.
+% The model performs the experiment across a range of inter-pulse intervals
+% and plots the maximally achieved pulse amplitude of the second pulse for
+% a wild type sodium channel (baseline), as well as a specific SCN1A
+% mutation causing epilepsy. 
 %
-% The routine produces a figure that was the basis for Figure 6A in the
-% publication below:
+% The routine produces a figure that was the basis for Figure 5b and d in 
+% the publication below:
 % 
 % Peters C, Rosch RE, Hughes E, Ruben P (2016) Temperature-dependent 
 % changes in neuronal dynamics in a patient with an SCN1A mutation and 
 % hyperthermia induced seizures (under review)
 
-
-
-
-% Full model evaluation (variable_hh)
-%==========================================================================
 % Housekeeping
-%--------------------------------------------------------------------------
+%==========================================================================
 clear all
 clf
 count = 1;
@@ -32,11 +35,9 @@ count = 1;
 % Choose experiments to be modelled
 %--------------------------------------------------------------------------
 n_exp           = {'WT37','WT40','AV37','AV40'};
-exp_parameters  = [1 2 3 4];  % 1 = WT37 (norm), 2 = WT40, 3 = AV37, 3 = AV40;
+exp_parameters  = [1 2 3 4];        % 1 = WT37 (norm), 2 = WT40, 3 = AV37, 3 = AV40;
 plot_phase      = 0;
-I_stim          = [0.2 45];         % I_stim    HH value = 0.200 nA
-direction       = [1 -1];           % 1 = forward, -1 = backward
-forward         = 0:2:90;           % defines range of I_stim parameter
+I_stim          = 0;                % I_stim    HH value = 0.200 nA
 
 % Set parameters (currently done according to literature
 %--------------------------------------------------------------------------
@@ -47,7 +48,8 @@ params(4) = 56;         % g_Na      Pospischil 2008, Fig 2
 params(5) = -90;        % E_K       Traub 1991
 params(6) = -70.3;    	% E_L       Pospischil 2008, Fig 2
 params(7) = 50;         % E_Na      Traub 1991
-params(11) = -60;      	% V_t       arbitrary (guided by Posposchil) 
+params(11) = -60;      	% V_t       arbitrary (guided by Posposchil)
+params(8) = I_stim;  
 
 for e = 1:4; %exp_parameters
   
@@ -104,46 +106,64 @@ params(13)  = s_h;
 params(14) = t_off;         
 
 
-for i = 1:2; 
+g_Na        = params(4);
+E_Na        = params(7);
+x_ini       = [0 0 0 0];
+
 % Run Model
 %==========================================================================
-params(8)   = I_stim(i);
-options     = odeset('InitialStep',0.005,'MaxStep',0.05);
-t_range     = [0 50];
-x_ini       = [0 0 0 0];
-[t,x]       = ode45(@(t,x)cort_variable_hh(t,x,params),t_range,x_ini,options);
+rec_t(1) = 0.1;      % recovery time in miliseconds
+for r = 1:10
+p1          = [100 200];
+p2          = [0 10] + [p1(2) + rec_t(r)];
+t_range     = [0 p2(2)+100];
 
-% Plot time courses
-% --------------------------------------------------------------------------
-Figure1     = figure(1); 
-xplot = linspace(1,length(t),5000);
-xplot = floor(xplot);
+options     = odeset('InitialStep',0.005,'MaxStep',t_range(2)/1000);
+[t,x]       = ode45(@(t,x)cort_hh_fastinactivation(t,x,params, p1, p2),t_range,x_ini,options);
 
-if e <= 2,  sp_no = 0;
-else        sp_no = 2; 
-end
+% Estimate currents for each time point
+%--------------------------------------------------------------------------
+% Estimate actual currents from model output (sodium channel conductance) 
+% and the set voltages as per voltage clamp experimental design
 
-if rem(e,2) == 0,   col = 'r'; 
-else                col = 'k';
-end
-
-subplot(1,4,sp_no+i);  
-    plot(t(xplot),x(xplot,1), col); hold on
-	title(n_exp{e});
-    axis([0,20,-100,100]);
-    set(gca, 'XTickLabel', [], 'Box', 'off');
-    xlabel('time');
-    if count > 1
-        set(gca, 'YTickLabel', []);
-    else
-        ylabel('Membrane voltage in mV');  
+for s = 1:length(t)
+    
+    if t(s) < p1(1), vol(s) = -130;                      % Initial cond
+    elseif t(s) > p1(1) && t(s) < p1(2), vol(s) = 0;     % Pulse 1
+    elseif t(s) > p2(1) && t(s) < p2(2), vol(s) = 0;     % Pulse 2 
+    else vol(s) = -90;                                   % Recovery Time
     end
     
-set(Figure1, 'Position', [100 100 1000 350]);  
-subplot(1,4,1), title('WT low stimulation');
-subplot(1,4,2), title('WT high stimulation');
-subplot(1,4,3), title('AV low stimulation');
-subplot(1,4,4), title('WT high stimulation'); legend({'37', '40'});
+    x(s,3) = (-g_Na * x(s,1)^3 * x(s,2) * (vol(s) - E_Na));    
 end
 
+% Estimate current peak after second pulse
+%--------------------------------------------------------------------------
+count = 1;
+for i = 1:length(t)
+    if t(i) > p2(1) && t(i) < (p2(1) + 10)
+        ind(count) = i;
+        count = count+1;
+    end
 end
+
+[val loc]    = findpeaks(x(ind,3));
+IR(e,r,1)    = rec_t(r);
+IR(e,r,2)    = max(val);
+
+rec_t(r+1)   = rec_t(r) * 2;
+end
+clear rec_t p1 p2 ind
+end
+
+subplot(2,1,1)
+plot(log(IR(1,:,1)), IR(1,:,2)/max(IR(1,:,2)), 'ks-'); hold on
+plot(log(IR(3,:,1)), IR(3,:,2)/max(IR(3,:,2)), 'ks:')
+title('37 degrees');
+legend({'WT', 'AV'});
+
+subplot(2,1,2)
+plot(log(IR(2,:,1)), IR(2,:,2)/max(IR(2,:,2)), 'rs-'); hold on
+plot(log(IR(4,:,1)), IR(4,:,2)/max(IR(4,:,2)), 'rs:')
+title('40 degrees');
+legend({'WT', 'AV'});

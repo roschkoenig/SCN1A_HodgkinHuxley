@@ -1,8 +1,41 @@
+%% Calculate and Plot Bifurcations for cortical HH model
+%==========================================================================
+% This routine will simulate a Hodgkin-Huxley model adapted to capture
+% dynamics of cortical neurons for different parameterisations: the
+% wildtype sodium channels at 37, and 40 degrees; A 
+
+
+% The routine produces a figure that was the basis for Figure 6 in the
+% publication below:
+% 
+% Peters C, Rosch RE, Hughes E, Ruben P (2016) Temperature-dependent 
+% changes in neuronal dynamics in a patient with an SCN1A mutation and 
+% hyperthermia induced seizures (under review)
+
+
+
+
+% Full model evaluation (variable_hh)
+%==========================================================================
+% Housekeeping
+%--------------------------------------------------------------------------
+clear all
+clf
+count = 1;
+
+% Manual parameters
+%==========================================================================
+% Define manually the name of the experiments and which experimental
+% parameters are going to be modelled in this evaluation
+
 % Choose experiments to be modelled
 %--------------------------------------------------------------------------
 n_exp           = {'WT37','WT40','AV37','AV40'};
-e               = 1;  % 1 = WT37 (norm), 2 = WT40, 3 = AV37, 3 = AV40;
-I_stim          = 0.2;         % I_stim    HH value = 0.200 nA
+exp_parameters  = [1 2 3 4];  % 1 = WT37 (norm), 2 = WT40, 3 = AV37, 3 = AV40;
+plot_phase      = 0;
+I_stim          = [0.2 45];         % I_stim    HH value = 0.200 nA
+direction       = [1 -1];           % 1 = forward, -1 = backward
+forward         = 0:2:90;           % defines range of I_stim parameter
 
 % Set parameters (currently done according to literature
 %--------------------------------------------------------------------------
@@ -13,8 +46,9 @@ params(4) = 56;         % g_Na      Pospischil 2008, Fig 2
 params(5) = -90;        % E_K       Traub 1991
 params(6) = -70.3;    	% E_L       Pospischil 2008, Fig 2
 params(7) = 50;         % E_Na      Traub 1991
-params(11) = -60;      	% V_t       arbitrary (guided by Posposchil)
-params(8) = I_stim; 
+params(11) = -60;      	% V_t       arbitrary (guided by Posposchil) 
+
+for e = 1:4; %exp_parameters
   
 % Parameters defined according to experimental values (with WT37 as baseline)
 %==========================================================================
@@ -69,50 +103,46 @@ params(13)  = s_h;
 params(14) = t_off;         
 
 
+for i = 1:2; 
 % Run Model
 %==========================================================================
-options     = odeset('InitialStep',0.0005,'MaxStep',0.005);
+params(8)   = I_stim(i);
+options     = odeset('InitialStep',0.005,'MaxStep',0.05);
 t_range     = [0 50];
 x_ini       = [0 0 0 0];
 [t,x]       = ode45(@(t,x)cort_variable_hh(t,x,params),t_range,x_ini,options);
 
-%% Plot Parameters and Phase Space
+% Plot time courses
 % --------------------------------------------------------------------------
-Figure1     = figure;
-set(gcf,'color','w');
-set(Figure1, 'PaperUnits', 'centimeters', 'PaperSize',[21 15],...
-    'PaperPosition',[0,0,6.5,4.5]);   
-
-xplot = linspace(1, length(t),1000);
+Figure1     = figure(1); 
+xplot = linspace(1,length(t),5000);
 xplot = floor(xplot);
-subplot(2,3,1) 
-    plot(t,x(:,1), 'LineWidth', 2); hold on;
-    timetrace = gca;
-    set(timetrace, 'XLim', [-5 0])
-    set(gca, 'YTick', []);
-    set(gca, 'XTickLabel', [], 'Box', 'off');
 
-subplot(2,3,4)   
-    plot(t,x(:,2:end), 'LineWidth', 2);
-    parametertrace = gca;
-    set(parametertrace, 'XLim', [-5 0])
-    set(gca, 'YTick', []);
-    set(gca, 'XTickLabel', [], 'Box', 'off');
-    
-pause
-last = xplot(1); 
-for i = xplot(2:1:length(xplot))
-    
-    set(timetrace, 'XLim', [-5 0]+t(i));
-    set(parametertrace, 'XLim', [-5 0]+t(i));
-
-    subplot(2,3,[2:3,5:6])
-        delete(last_dot)
-        last_dot = scatter3(x(i,2), x(i,3), x(i,4), 100, 'r', 'filled');
-        scatter3(x(i,2), x(i,3), x(i,4), 'k', 'filled');
-        axis([0 1 0 1 0 1]);
-        view(-15.5,40)
-        hold on;
-    pause(0.00001);
+if e <= 2,  sp_no = 0;
+else        sp_no = 2; 
 end
+
+if rem(e,2) == 0,   col = 'r'; 
+else                col = 'k';
+end
+
+subplot(1,4,sp_no+i);  
+    plot(t(xplot),x(xplot,1), col); hold on
+	title(n_exp{e});
+    axis([0,20,-100,100]);
+    set(gca, 'XTickLabel', [], 'Box', 'off');
+    xlabel('time');
+    if count > 1
+        set(gca, 'YTickLabel', []);
+    else
+        ylabel('Membrane voltage in mV');  
+    end
     
+set(Figure1, 'Position', [100 100 1000 350]);  
+subplot(1,4,1), title('WT low stimulation');
+subplot(1,4,2), title('WT high stimulation');
+subplot(1,4,3), title('AV low stimulation');
+subplot(1,4,4), title('WT high stimulation'); legend({'37', '40'});
+end
+
+end

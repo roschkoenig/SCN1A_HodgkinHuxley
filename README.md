@@ -16,5 +16,7 @@ Remaining empirical values are represented as absolute (voltage parameters), or 
 ```
 cort_variable_hh_eval
 ```
-![alt text](https://cloud.githubusercontent.com/assets/12950773/16312193/8040b0fc-396b-11e6-8560-272a28e32430.png "Logo Title Text 1")
+![Output from full model simulations](https://cloud.githubusercontent.com/assets/12950773/16312193/8040b0fc-396b-11e6-8560-272a28e32430.png "Logo Title Text 1")
 This script calls `cort_variable_hh.m` and uses Matlab ODE solver to integrate the model and plot the time course. The parameters are derived from a baseline model of cortical dynamics with experimental values implemented in terms of deviations from the baseline parameters. 
+
+

@@ -13,11 +13,6 @@
 % changes in neuronal dynamics in a patient with an SCN1A mutation and 
 % hyperthermia induced seizures (under review)
 
-
-
-
-% Full model evaluation (variable_hh)
-%==========================================================================
 % Housekeeping
 %--------------------------------------------------------------------------
 clear all

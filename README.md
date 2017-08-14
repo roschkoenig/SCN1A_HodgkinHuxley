@@ -1,7 +1,7 @@
 ## Modelling dynamic abnormalities caused by an SCN1A mutation
-The Matlab scripts uploaded here implement a Hodgkin-Huxley type neuronal model with parameterisation derived directly from experimental voltage clamp results. They correspond in part to the <a href="http://dx.doi.org/10.1101/048520">preprint</a> of an upcoming publication. The scripts were used to produce the figures in the final manuscript, which will be published soon:
+The Matlab scripts uploaded here implement a Hodgkin-Huxley type neuronal model with parameterisation derived directly from experimental voltage clamp results. They correspond in part to the <a href="http://dx.doi.org/10.1101/048520">preprint</a> of an upcoming publication. The scripts were used to produce the figures in the final manuscript, which is now out:
 
-Peters C<sup>+</sup>, Rosch RE<sup>+</sup>, Hughes E, Ruben PC (2016): Temperature-dependent changes in neuronal dynamics in a patient with an SCN1A mutation and hyperthermia induced seizures. <em> under review </em> <br>
+[Peters C<sup>+</sup>, Rosch RE<sup>+</sup>, Hughes E, Ruben PC (2016): Temperature-dependent changes in neuronal dynamics in a patient with an SCN1A mutation and hyperthermia induced seizures. *Sci Rep* 6, 31879](http://doi.org/10.1038/srep31879)
 <sup>+</sup> <em>equal contribution</em>
 
 ### Fitting Boltzmann Equations and Plotting Steady-State Parameters
